@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitives
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+
+    function isValidProgress(data, chapterId) {
+      return data.keys().hasAll(['chapterId', 'easyCount', 'goodCount', 'hardCount', 'masteryScore', 'updatedAt']) &&
+             data.keys().size() == 6 &&
+             data.chapterId == chapterId &&
+             data.chapterId is string && data.chapterId.size() <= 128 &&
+             data.easyCount is number && data.easyCount >= 0 &&
+             data.goodCount is number && data.goodCount >= 0 &&
+             data.hardCount is number && data.hardCount >= 0 &&
+             data.masteryScore is number && data.masteryScore >= 0 &&
+             data.updatedAt == request.time;
+    }
+
+    match /users/{userId}/progress/{chapterId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId) && resource.data.chapterId is string;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(chapterId) &&
+                       isValidProgress(incoming(), chapterId);
+                       
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(chapterId) &&
+                       isValidProgress(incoming(), chapterId) &&
+                       incoming().chapterId == existing().chapterId &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['easyCount', 'goodCount', 'hardCount', 'masteryScore', 'updatedAt']);
+                       
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(chapterId);
+    }
+  }
+}

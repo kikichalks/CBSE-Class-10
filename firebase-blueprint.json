@@ -1,0 +1,24 @@
+{
+  "entities": {
+    "ChapterProgress": {
+      "title": "Chapter Progress",
+      "description": "Progress of a user in a specific chapter",
+      "type": "object",
+      "properties": {
+        "chapterId": { "type": "string" },
+        "easyCount": { "type": "number" },
+        "goodCount": { "type": "number" },
+        "hardCount": { "type": "number" },
+        "masteryScore": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["chapterId", "easyCount", "goodCount", "hardCount", "masteryScore", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/progress/{chapterId}": {
+      "schema": { "$ref": "#/entities/ChapterProgress" },
+      "description": "User progress per chapter."
+    }
+  }
+}
